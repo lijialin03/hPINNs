@@ -37,7 +37,7 @@ class Funcs:
             [[-self.DPML, -self.DPML], [self.DPML, self.DPML]]
         )
         self.beta = 2.0
-        self.mu = 10
+        self.mu = 2
         self.lambda_re = None
         self.lambda_im = None
         self._in = None
@@ -265,7 +265,16 @@ class Funcs:
         return losses  # augmented_Lagrangian
 
     def eval_loss_fun(self, output_dict):
-        return paddle.to_tensor(0.0)
+        x, y = output_dict["x"], output_dict["y"]
+        e_re = output_dict["e_real"]
+        e_im = output_dict["e_imaginary"]
+
+        f1 = paddle.heaviside((x + 0.5) * (0.5 - x), paddle.to_tensor(0.5))
+        f2 = paddle.heaviside((y - 1) * (2 - y), paddle.to_tensor(0.5))
+        j = e_re**2 + e_im**2 - f1 * f2
+        losses = F.mse_loss(j, paddle.zeros_like(j, dtype="float32"), "mean")
+
+        return losses
 
     def eval_metric_fun(self, output_dict):
         loss_re, loss_im = self.get_loss_re_n_im(output_dict)
@@ -327,7 +336,7 @@ if __name__ == "__main__":
 
     # set training hyper-parameters
     ITERS_PER_EPOCH = 1
-    EPOCHS = 35000 if args.epochs is None else args.epochs  # set 1 for LBFGS
+    EPOCHS = 20000 if args.epochs is None else args.epochs
     MAX_ITER = 50000  # for LBFGS
 
     # initialize optimizer
@@ -646,7 +655,7 @@ if __name__ == "__main__":
     # log of loss
     loss_log = np.array(f.loss_log).reshape(-1, 3)
 
-    p = Plot("sc_mu_10", OUTPUT_DIR)
+    p = Plot("test", OUTPUT_DIR)
     p.plot_6a(loss_log)
     # p.plot_6b(loss_log_obj)
     # p.plot_6c7c(f.lambda_log, input_valid, output_valid, input_train)
